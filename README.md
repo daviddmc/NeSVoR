@@ -1,12 +1,10 @@
 # NeSVoR: **Ne**ural **S**lice-to-**Vo**lume **R**econstruction
 
-NeSVoR is a package for GPU accelerated slice-to-volume reconstruction that provides
-- Motion correction by mapping 2D slices to a 3D atlas space using [Slice-to-Volume Registration Transformers (SVoRT)](https://link.springer.com/chapter/10.1007/978-3-031-16446-0_1).
-- Volumetric reconstruction of multiple 2D slices using implicit neural representation ([NeSVoR]()).
+NeSVoR is a package for GPU-accelerated slice-to-volume reconstruction.
 
 <!-- toc -->
 
-<!-- - [More About NeSVoR](#more-about-nesvor) -->
+- [Overview](#overview)
 - [Installation](#installation)
   - [From Source](#from-source)
     - [Prerequisites](#prerequisites)
@@ -17,7 +15,6 @@ NeSVoR is a package for GPU accelerated slice-to-volume reconstruction that prov
     - [Install Docker and NVIDIA Container Toolkit](#install-docker-and-nvidia-container-toolkit)
     - [Download and Run NeSVoR Image](#download-and-run-nesvor-image)
 - [Usage](#usage)
-  - [Overview](#overview)
   - [Reconstruction](#reconstruction)
   - [Registration](#registration)
   - [Sample Volume](#sample-volume)
@@ -25,6 +22,12 @@ NeSVoR is a package for GPU accelerated slice-to-volume reconstruction that prov
 - [Cite Our Work](#cite-our-work)
 
 <!-- tocstop -->
+
+## Overview
+
+NeSVoR is a deep learning package for solving slice-to-volume reconstruction problems (i.e., reconstructing a 3D high-resolution volume from a set of motion-corrupted low-resolution slices) with application to fetal/neonatal brain MRI, which provides
+- Motion correction by mapping 2D slices to a 3D atlas space using [Slice-to-Volume Registration Transformers (SVoRT)](https://link.springer.com/chapter/10.1007/978-3-031-16446-0_1).
+- Volumetric reconstruction of multiple 2D slices using implicit neural representation ([NeSVoR]()).
 
 <!--- 
 
@@ -49,7 +52,7 @@ NeSVoR aims
 
 ### From Source
 
-#### Prerequisite
+#### Prerequisites
 
 If you are installing from source, you will need:
 - An NVIDIA GPU
@@ -72,7 +75,7 @@ cd NeSVoR
 ```
 pip install -r requirements.txt
 ```
-Install Pytorch extension of [tiny-cuda-nn](https://github.com/NVlabs/tiny-cuda-nn). Make sure the installed CUDA version mismatches the version that was used to compile PyTorch. Then, run the following command (see [this](https://github.com/NVlabs/tiny-cuda-nn#pytorch-extension) for more details)
+Install PyTorch extension of [tiny-cuda-nn](https://github.com/NVlabs/tiny-cuda-nn). Make sure the installed CUDA version mismatches the version that was used to compile PyTorch. Then, run the following command (see [this](https://github.com/NVlabs/tiny-cuda-nn#pytorch-extension) for more details)
 ```
 pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
 ```
@@ -103,11 +106,9 @@ Note: our image was built with CUDA 11.6.
 
 ## Usage
 
-### Overview
-
 NeSVoR currently supports the following commands.
 
-`nesvor reconstruct`: reconstruct a 3D volume (i.e., train a NeSVoR model) from either mutiple stacks of slices (NIfTI) or a set of motion-corrected slices (the output of `register`).
+`nesvor reconstruct`: reconstruct a 3D volume (i.e., train a NeSVoR model) from either multiple stacks of slices (NIfTI) or a set of motion-corrected slices (the output of `register`).
 
 `nesvor register`: register stacks of slices using a pretrained SVoRT model.
 
@@ -156,7 +157,7 @@ Given multiple stacks at inputs, `reconstruct` first corrects the motion in the 
 
 #### Reconstruct from Motion-Corrected Slices
 
-`reconstruct` can also take a folder of motion corrected slices as inputs. 
+`reconstruct` can also take a folder of motion-corrected slices as inputs. 
 ```
 nesvor reconstruct \
 --input-slices <path-to-slices-folder> \
@@ -173,7 +174,7 @@ nesvor register \
 --registration <method> \
 --output-slices <path-to-save-output-slices>
 ```
-`register` currently suports the following methods:
+`register` currently supports the following methods:
 - `svort`: the full SVoRT model;
 - `svort-stack`: only apply stack transformations of SVoRT;
 - `stack`: stack-to-stack rigid registration;
@@ -189,7 +190,7 @@ nesvor sample-volume \
 ```
 
 ### Sample Slices
-You may sample slices from the model using the `sample-slices` command. For each slice in `<path-to-slices-folder>`, the command simulate a slice from the NeSVoR model at the corresponding slice location.
+You may sample slices from the model using the `sample-slices` command. For each slice in `<path-to-slices-folder>`, the command simulates a slice from the NeSVoR model at the corresponding slice location.
 ```
 nesvor sample-slices \
 --input-slices <path-to-slices-folder> \
@@ -200,7 +201,7 @@ For example, after running `reconstruct`, you can use `sample-slices` to simulat
 
 <!-- ## Resources -->
 
-## Citing Our Work
+## Cite Our Work
 
 ```
 @inproceedings{xu2022svort,

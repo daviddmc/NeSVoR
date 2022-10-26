@@ -1,0 +1,5 @@
+torch>=1.10.2
+torchvision>=0.11.3
+nibabel>=3.2.2
+scipy>=1.7.3
+#git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch

@@ -41,14 +41,14 @@ NeSVoR is a deep learning package for solving slice-to-volume reconstruction pro
 <!--### Slice-to-Volume Registration Transformers (SVoRT)-->
 
 <p align="center">
-   <img src="./SVoRT_network.png" align="center" width="600">
+   <img src="./images/SVoRT_network.png" align="center" width="600">
 </p>
 <p align="center">Figure 1. SVoRT: an iterative Transformer for slice-to-volume registration. (a) The k-th iteration of SVoRT. (b) The detailed network architecture of the SVT module.<p align="center">
 
 <!--### Neural Slice-to-Volume Reconstruction (NeSVoR)-->
 
 <p align="center">
-   <img src="./NeSVoR.png" align="center" width="900">
+   <img src="./images/NeSVoR.png" align="center" width="900">
 </p>
 <p align="center">Figure 2. NeSVoR: A) The forward imaging model in NeSVoR. B) The architecture of the implicit neural network in NeSVoR.<p align="center">
 

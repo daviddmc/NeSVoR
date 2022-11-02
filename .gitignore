@@ -4,8 +4,6 @@ checkpoints/
 tests/
 out.pt
 out.nii.gz
-NeSVoR.png
-SVoRT_network.png
 test_logging.log
 test_script.py
 output_slices/

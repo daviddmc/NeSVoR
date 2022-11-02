@@ -8,6 +8,10 @@ This package is the accumulation of the following works:
 
 \[2\] NeSVoR: Implicit Neural Representation for Slice-to-Volume Reconstruction in MRI ([TechRxiv](https://www.techrxiv.org/articles/preprint/NeSVoR_Implicit_Neural_Representation_for_Slice-to-Volume_Reconstruction_in_MRI/21398868/1))
 
+<p align="center">
+   <img src="./images/recon.gif" align="center" width="600">
+</p>
+<p align="center"><p align="center">
 
 <!-- toc -->
 <!--

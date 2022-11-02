@@ -2,8 +2,17 @@
 
 NeSVoR is a package for GPU-accelerated slice-to-volume reconstruction.
 
-<!-- toc -->
+This package is the accumulation of the following works:
 
+\[1\] SVoRT: Iterative Transformer for Slice-to-Volume Registration in Fetal Brain MRI ([Springer](https://link.springer.com/chapter/10.1007/978-3-031-16446-0_1) | [Arxiv](https://arxiv.org/abs/2206.10802))
+
+\[2\] NeSVoR: Implicit Neural Representation for Slice-to-Volume Reconstruction in MRI ([TechRxiv](https://www.techrxiv.org/articles/preprint/NeSVoR_Implicit_Neural_Representation_for_Slice-to-Volume_Reconstruction_in_MRI/21398868/1))
+
+
+<!-- toc -->
+<!--
+  - [Slice-to-Volume Registration Transformers (SVoRT)](#slice-to-volume-registration-transformers-svort)
+  - [Neural Slice-to-Volume Reconstruction (NeSVoR)](#neural-slice-to-volume-reconstruction-nesvor) -->
 - [Overview](#overview)
 - [Installation](#installation)
   - [From Source](#from-source)
@@ -25,28 +34,23 @@ NeSVoR is a package for GPU-accelerated slice-to-volume reconstruction.
 
 ## Overview
 
-NeSVoR is a deep learning package for solving slice-to-volume reconstruction problems (i.e., reconstructing a 3D high-resolution volume from a set of motion-corrupted low-resolution slices) with application to fetal/neonatal brain MRI, which provides
-- Motion correction by mapping 2D slices to a 3D atlas space using [Slice-to-Volume Registration Transformers (SVoRT)](https://link.springer.com/chapter/10.1007/978-3-031-16446-0_1).
-- Volumetric reconstruction of multiple 2D slices using implicit neural representation ([NeSVoR]()).
+NeSVoR is a deep learning package for solving slice-to-volume reconstruction problems (i.e., reconstructing a 3D isotropic high-resolution volume from a set of motion-corrupted low-resolution slices) with application to fetal/neonatal brain MRI, which provides
+- Motion correction by mapping 2D slices to a 3D canonical space using [Slice-to-Volume Registration Transformers (SVoRT)](https://link.springer.com/chapter/10.1007/978-3-031-16446-0_1).
+- Volumetric reconstruction of multiple 2D slices using implicit neural representation ([NeSVoR](https://www.techrxiv.org/articles/preprint/NeSVoR_Implicit_Neural_Representation_for_Slice-to-Volume_Reconstruction_in_MRI/21398868/1)).
 
-<!--- 
-
-## More About NeSVoR
-
-NeSVoR aims 
+<!--### Slice-to-Volume Registration Transformers (SVoRT)-->
 
 <p align="center">
    <img src="./SVoRT_network.png" align="center" width="600">
 </p>
 <p align="center">Figure 1. SVoRT: an iterative Transformer for slice-to-volume registration. (a) The k-th iteration of SVoRT. (b) The detailed network architecture of the SVT module.<p align="center">
 
+<!--### Neural Slice-to-Volume Reconstruction (NeSVoR)-->
 
 <p align="center">
    <img src="./NeSVoR.png" align="center" width="900">
 </p>
 <p align="center">Figure 2. NeSVoR: A) The forward imaging model in NeSVoR. B) The architecture of the implicit neural network in NeSVoR.<p align="center">
-
---->
 
 ## Installation
 
@@ -203,6 +207,7 @@ For example, after running `reconstruct`, you can use `sample-slices` to simulat
 
 ## Cite Our Work
 
+SVoRT
 ```
 @inproceedings{xu2022svort,
   title={SVoRT: Iterative Transformer for Slice-to-Volume Registration in Fetal Brain MRI},
@@ -211,5 +216,17 @@ For example, after running `reconstruct`, you can use `sample-slices` to simulat
   pages={3--13},
   year={2022},
   organization={Springer}
+}
+```
+
+NeSVoR
+```
+@article{Xu2022,
+author = "Junshen Xu and Daniel Moyer and Borjan Gagoski and Juan Eugenio Iglesias and P. Ellen Grant and Polina Golland and Elfar Adalsteinsson",
+title = "{NeSVoR: Implicit Neural Representation for Slice-to-Volume Reconstruction in MRI}",
+year = "2022",
+month = "11",
+url = "https://www.techrxiv.org/articles/preprint/NeSVoR_Implicit_Neural_Representation_for_Slice-to-Volume_Reconstruction_in_MRI/21398868",
+doi = "10.36227/techrxiv.21398868.v1"
 }
 ```

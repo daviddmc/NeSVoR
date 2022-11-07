@@ -94,18 +94,6 @@ class MovingAverage:
         self.alpha = alpha
         self._value: Dict[str, Any] = dict()
 
-    """
-    def get_str(self, key):
-        return "%.3e" % self.get_value(key)
-
-    def get_value(self, key):
-        num, v = self._value[key]
-        if self.alpha:
-            return v / (1 - self.alpha**num)
-        else:
-            return v / num
-    """
-
     def to_dict(self) -> Dict[str, Any]:
         return {"alpha": self.alpha, "value": self._value}
 

@@ -48,7 +48,6 @@ class Dataset(object):
 
     @property
     def mean(self) -> float:
-        print(self.v.shape)
         q1, q2 = torch.quantile(
             self.v,
             torch.tensor([0.1, 0.9], dtype=self.v.dtype, device=self.v.device),
@@ -172,8 +171,9 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
     train_logger = TrainLogger(
         "time", "epoch", "iter", D_LOSS, S_LOSS, DS_LOSS, T_REG, B_REG, I_REG, "lr"
     )
-    # train_logging()
+    train_time = 0.0
     for i in range(1, args.n_iter + 1):
+        train_step_start = time.time()
         # forward
         batch = dataset.get_batch(args.batch_size, args.device)
         with torch.cuda.amp.autocast(fp16):
@@ -187,12 +187,13 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
         scaler.step(optimizer)
         scaler.update()
         optimizer.zero_grad()
+        train_time += time.time() - train_step_start
         for k in losses:
             average(k, losses[k].item())
         if (decay_milestones and i >= decay_milestones[0]) or i == args.n_iter:
             # logging
             train_logger.log(
-                datetime.timedelta(seconds=int(time.time() - t_start)),
+                datetime.timedelta(seconds=int(train_time)),
                 dataset.epoch,
                 i,
                 average[D_LOSS],
@@ -207,8 +208,24 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
             if i < args.n_iter:
                 decay_milestones.pop(0)
                 scheduler.step()
+        """
+        if train_time > tmp_counter:
+            from .sample import sample_volume
+
+            model.eval()
+            # dataset.transformation = model.transformation
+            vv = sample_volume(model.inr, dataset.mask, args)
+            vv.save(
+                "/home/junshen/SVoRT/github/NeSVoR/output_slices/%d.nii.gz"
+                % tmp_counter
+            )
+            model.train()
+            tmp_counter += 1
+        """
+
     # outputs
     transformation = model.transformation
+    dataset.transformation = transformation
     mask = dataset.mask
     output_slices = []
     for i in range(len(slices)):
@@ -216,38 +233,3 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
         output_slice.transformation = transformation[i]
         output_slices.append(output_slice)
     return model.inr, output_slices, mask
-
-
-"""
-def train_logging(i=0, epoch=0, t_start=0, average=None, optimizer=None):
-    template = "%8s %8s %8s %12s %12s %12s %12s %12s %12s %12s"
-    if i == 0:
-        logging.info("NeSVoR training starts.")
-        logging.info(
-            template,
-            "time",
-            "epoch",
-            "iter",
-            D_LOSS,
-            S_LOSS,
-            DS_LOSS,
-            T_REG,
-            B_REG,
-            I_REG,
-            "lr",
-        )
-    else:
-        logging.info(
-            template,
-            str(datetime.timedelta(seconds=int(time.time() - t_start))),
-            epoch,
-            i,
-            average.get_str(D_LOSS),
-            average.get_str(S_LOSS),
-            average.get_str(DS_LOSS),
-            average.get_str(T_REG),
-            average.get_str(B_REG),
-            average.get_str(I_REG),
-            "%.3e" % optimizer.param_groups[0]["lr"],
-        )
-"""

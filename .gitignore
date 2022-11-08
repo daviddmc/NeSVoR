@@ -8,6 +8,7 @@ test_logging.log
 test_script.py
 output_slices/
 simulated_slices/
+test_bch_all.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

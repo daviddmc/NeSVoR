@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from .registration import VVR, resample
 from .srr import PSFreconstruction, SRR
-from . import SVoRT
+from . import SVoRT, SVoRTnew
 from ..transform import RigidTransform, mat_update_resolution
 from ..utils import get_PSF, ncc_loss
 from ..slice_acquisition import slice_acquisition
@@ -128,6 +128,48 @@ def run_model(transforms, stacks, model, res_s, s_thick, res_r):
                         transforms_out[-1]
                     )
     return transforms_out, volume
+
+
+def run_model_new(transforms, stacks, model, res_s, s_thick, res_r):
+    # run models
+    device = stacks[0].device
+    dtype = stacks[0].dtype
+    slice_shape = stacks[0].shape[-2:]
+
+    positions = torch.cat(
+        [
+            torch.stack(
+                (
+                    torch.arange(slices.shape[0], dtype=dtype, device=device)
+                    - slices.shape[0] // 2,
+                    torch.full((slices.shape[0],), i, dtype=dtype, device=device),
+                ),
+                dim=-1,
+            )
+            for i, slices in enumerate(stacks)
+        ],
+        dim=0,
+    )
+
+    with torch.no_grad():
+        volume_shape = (256, 256, 256)
+        data = {
+            "psf_rec": get_PSF(
+                res_ratio=(res_s / res_r, res_s / res_r, s_thick / res_r),
+                device=device,
+            ),
+            "slice_shape": slice_shape,  # (128, 128)
+            "resolution_slice": res_s,
+            "resolution_recon": res_r,
+            "slice_thickness": s_thick,
+            "volume_shape": volume_shape,  # (125, 169, 145),
+            "transforms": RigidTransform.cat(transforms).matrix(),
+            "stacks": torch.cat(stacks, dim=0),
+            "positions": positions,
+        }
+        t_out, v_out, _ = model(data)
+        transforms_out = [t_out[-1][positions[:, -1] == i] for i in range(len(stacks))]
+    return transforms_out, v_out[-1]
 
 
 def parse_data(dataset, res_s):
@@ -412,9 +454,16 @@ def run_svort(dataset, model, svort, vvr, force_vvr):
         ) = parse_data(dataset, res_s)
 
     if svort:
-        transforms_svort, volume_svort = run_model(
-            transforms_cropped_reset, stacks_cropped, model, res_s, s_thick, res_r
-        )
+        if isinstance(model, SVoRT):
+            # print("old svort")
+            transforms_svort, volume_svort = run_model(
+                transforms_cropped_reset, stacks_cropped, model, res_s, s_thick, res_r
+            )
+        else:
+            # print("new svort")
+            transforms_svort, volume_svort = run_model_new(
+                transforms_cropped_reset, stacks_cropped, model, res_s, s_thick, res_r
+            )
 
         transforms_corrected, score_svort = correct_svort(
             transforms_svort,
@@ -814,12 +863,19 @@ def svort_predict(
     dataset: List[Stack], device, svort: bool, vvr: bool, force_vvr: bool
 ) -> List[Slice]:
     model = SVoRT(n_iter=3)
-    cp = torch.hub.load_state_dict_from_url(
-        url=__svort_url,
-        model_dir=__checkpoint_dir,
-        map_location=device,
-        file_name=__svort_checkpoint_name,
-    )
+    # model = SVoRTnew(n_iter=4)
+    if isinstance(model, SVoRT):
+        cp = torch.hub.load_state_dict_from_url(
+            url=__svort_url,
+            model_dir=__checkpoint_dir,
+            map_location=device,
+            file_name=__svort_checkpoint_name,
+        )
+    else:
+        cp = torch.load(
+            "/home/junshen/SVoRT/github/SVoRT/results/SVoRT_new_6stacks/checkpoint.pt",
+            map_location=device,
+        )
     model.to(device)
     model.load_state_dict(cp["model"])
     model.eval()

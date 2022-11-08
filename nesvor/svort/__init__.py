@@ -1,1 +1,1 @@
-from .models import SVoRT
+from .models import SVoRT, SVoRTnew

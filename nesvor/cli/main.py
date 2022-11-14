@@ -340,6 +340,7 @@ def build_parser_common() -> argparse.ArgumentParser:
     )
     parser.add_argument("--output-log", type=str, help="Path to the output log file")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
+    parser.add_argument("--debug", action="store_true", help="Debug mode.")
     return _parser
 
 

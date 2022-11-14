@@ -9,6 +9,8 @@ test_script.py
 output_slices/
 simulated_slices/
 test_bch_all.py
+*.nii
+*.nii.gz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

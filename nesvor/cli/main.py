@@ -24,6 +24,10 @@ def update_defaults(parser, **kwargs):
     parser.set_defaults(**kwargs)
 
 
+def bool_type(s):
+    return s.upper() not in ["F", "FALSE", "0"]
+
+
 def build_parser_training() -> argparse.ArgumentParser:
     _parser = argparse.ArgumentParser(add_help=False)
     parser = _parser.add_argument_group("model architecture")
@@ -47,10 +51,10 @@ def build_parser_training() -> argparse.ArgumentParser:
         help="Scaling factor between two levels.",
     )
     parser.add_argument(
-        "--coarse-resolution",
+        "--coarsest-resolution",
         default=16.0,
         type=float,
-        help="Resolution of the coarse grid in millimeter.",
+        help="Resolution of the coarsest grid in millimeter.",
     )
     parser.add_argument(
         "--finest-resolution",
@@ -86,20 +90,38 @@ def build_parser_training() -> argparse.ArgumentParser:
     parser.add_argument(
         "--transformation-optimization",
         default=True,
-        type=bool,
+        type=bool_type,
         help="Use transfromation optimization.",
     )
     parser.add_argument(
         "--slice-scale",
         default=True,
-        type=bool,
+        type=bool_type,
         help="Use adaptive scaling for slices.",
     )
     parser.add_argument(
-        "--pixel-variance", default=True, type=bool, help="Use pixel-level variance."
+        "--pixel-variance",
+        default=True,
+        type=bool_type,
+        help="Use pixel-level variance.",
     )
     parser.add_argument(
-        "--slice-variance", default=True, type=bool, help="Use slice-level variance."
+        "--slice-variance",
+        default=True,
+        type=bool_type,
+        help="Use slice-level variance.",
+    )
+    parser.add_argument(
+        "--deformable",
+        default=False,
+        type=bool_type,
+        help="under development",
+    )
+    parser.add_argument(
+        "--n-features-deform",
+        default=8,
+        type=int,
+        help="under development",
     )
     # loss function
     parser = _parser.add_argument_group("loss function")
@@ -127,6 +149,12 @@ def build_parser_training() -> argparse.ArgumentParser:
         default=1.0 * 2,
         type=float,
         help="Weight of image regularization.",
+    )
+    parser.add_argument(
+        "--weight-deform",
+        default=0.0,
+        type=float,
+        help="under development",
     )
     parser.add_argument(
         "--delta",
@@ -252,7 +280,7 @@ def build_parser_outputs(
         parser.add_argument(
             "--output-psf",
             default=True,
-            type=bool,
+            type=bool_type,
             help="use psf for generating output volume",
         )
     # output slices
@@ -279,6 +307,9 @@ def build_parser_outputs(
             required=output_model == "required",
             help="Path to save the output model (.pt)",
         )
+    parser.add_argument(
+        "--mask-threshold", type=float, default=1.0, help="under development"
+    )
     update_defaults(_parser, **kwargs)
     return _parser
 

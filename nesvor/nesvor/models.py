@@ -17,6 +17,7 @@ DS_LOSS = "MSE+logVar"
 B_REG = "biasReg"
 T_REG = "transReg"
 I_REG = "imageReg"
+D_REG = "deformReg"
 
 
 class INR(nn.Module):
@@ -29,7 +30,7 @@ class INR(nn.Module):
         base_resolution = (
             (
                 (self.bounding_box[1] - self.bounding_box[0]).max()
-                / args.coarse_resolution
+                / args.coarsest_resolution
             )
             .ceil()
             .int()

@@ -154,7 +154,7 @@ nesvor reconstruct \
 --delta 0.2 \
 --n-iter 5000 \
 --level-scale 1.38 \
---coarse-resolution 16.0 \
+--coarsest-resolution 16.0 \
 --finest-resolution 0.5 \
 --n-levels-bias 0 \
 --n-samples 128

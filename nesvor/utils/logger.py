@@ -36,12 +36,10 @@ class TrainLogger(object):
         return template % tuple(args)
 
 
-def _log_params(
-    model: torch.nn.Module,
-    name_len: int = 25,
-    shape_len: int = 20,
-    n_param_len: int = 20,
-) -> str:
+def _log_params(model: torch.nn.Module) -> str:
+    name_len = max(len(name) for name, _ in model.named_parameters()) + 1
+    shape_len = 20
+    n_param_len = 20
     sep_len = name_len + shape_len + n_param_len + 3
     sep = "-" * sep_len
     template = f"%{name_len}s %{shape_len}s %{n_param_len}s\n"

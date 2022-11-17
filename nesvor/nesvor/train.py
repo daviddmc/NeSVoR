@@ -12,7 +12,10 @@ from ..image import Volume, Slice
 
 
 class Dataset(object):
-    def __init__(self, slices: List[Slice]) -> None:
+    def __init__(self, slices: List[Slice], args: Namespace) -> None:
+
+        self.mask_threshold = args.mask_threshold
+
         xyz_all = []
         v_all = []
         slice_idx_all = []
@@ -49,7 +52,7 @@ class Dataset(object):
     @property
     def mean(self) -> float:
         q1, q2 = torch.quantile(
-            self.v,
+            self.v if self.v.numel() < 256 * 256 * 256 else self.v[: 256 * 256 * 256],
             torch.tensor([0.1, 0.9], dtype=self.v.dtype, device=self.v.device),
         )
         return self.v[torch.logical_and(self.v > q1, self.v < q2)].mean().item()
@@ -95,7 +98,9 @@ class Dataset(object):
             )
             mask = mask.view((1, 1) + shape).float()
             mask_threshold = (
-                1.0 * resolution_min**3 / self.resolution.log().mean().exp() ** 3
+                self.mask_threshold
+                * resolution_min**3
+                / self.resolution.log().mean().exp() ** 3
             )
             mask_threshold *= mask.sum() / (mask > 0).sum()
             mask = (
@@ -117,7 +122,7 @@ class Dataset(object):
 
 def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volume]:
     # create training dataset
-    dataset = Dataset(slices)
+    dataset = Dataset(slices, args)
     model = NeSVoR(
         dataset.transformation,
         dataset.resolution,
@@ -136,10 +141,10 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
                 params_encoding.append(param)
     # logging
     logging.debug(log_params(model))
-    optimizer = torch.optim.Adam(
+    optimizer = torch.optim.AdamW(
         params=[
             {"name": "encoding", "params": params_encoding},
-            {"name": "net", "params": params_net, "weight_decay": 1e-6},
+            {"name": "net", "params": params_net, "weight_decay": 1e-2},
         ],
         lr=args.learning_rate,
         betas=(0.9, 0.99),
@@ -154,7 +159,9 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
     decay_milestones = [int(m * args.n_iter) for m in args.milestones]
     # setup grad scalar for mixed precision training
     fp16 = True
-    scaler = torch.cuda.amp.GradScaler(1.0, enabled=fp16)
+    scaler = torch.cuda.amp.GradScaler(
+        init_scale=128.0, enabled=fp16, growth_factor=1.0001, backoff_factor=0.9999
+    )  # old init factor = 1.0
     # training
     model.train()
     loss_weights = {
@@ -165,12 +172,9 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
         I_REG: args.weight_image,
     }
     average = MovingAverage(1 - 0.001)
-    t_start = time.time()
     # logging
+    logging_header = False
     logging.info("NeSVoR training starts.")
-    train_logger = TrainLogger(
-        "time", "epoch", "iter", D_LOSS, S_LOSS, DS_LOSS, T_REG, B_REG, I_REG, "lr"
-    )
     train_time = 0.0
     for i in range(1, args.n_iter + 1):
         train_step_start = time.time()
@@ -180,10 +184,14 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
             losses = model(**batch)
             loss = 0
             for k in losses:
-                if k in loss_weights:
+                if k in loss_weights and loss_weights[k]:
                     loss = loss + loss_weights[k] * losses[k]
         # backward
         scaler.scale(loss).backward()
+        if args.debug:  # check nan grad
+            for _name, _p in model.named_parameters():
+                if _p.grad is not None and not _p.grad.isfinite().all():
+                    logging.debug("iter %d: Found NaNs in the grad of %s", i, _name)
         scaler.step(optimizer)
         scaler.update()
         optimizer.zero_grad()
@@ -192,19 +200,22 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
             average(k, losses[k].item())
         if (decay_milestones and i >= decay_milestones[0]) or i == args.n_iter:
             # logging
+            if not logging_header:
+                train_logger = TrainLogger(
+                    "time",
+                    "epoch",
+                    "iter",
+                    *list(losses.keys()),
+                    "lr",
+                )
+                logging_header = True
             train_logger.log(
                 datetime.timedelta(seconds=int(train_time)),
                 dataset.epoch,
                 i,
-                average[D_LOSS],
-                average[S_LOSS],
-                average[DS_LOSS],
-                average[T_REG],
-                average[B_REG],
-                average[I_REG],
+                *[average[k] for k in losses],
                 optimizer.param_groups[0]["lr"],
             )
-            # train_logging(i, dataset.epoch, t_start, average, optimizer)
             if i < args.n_iter:
                 decay_milestones.pop(0)
                 scheduler.step()

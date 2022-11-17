@@ -111,18 +111,6 @@ def build_parser_training() -> argparse.ArgumentParser:
         type=bool_type,
         help="Use slice-level variance.",
     )
-    parser.add_argument(
-        "--deformable",
-        default=False,
-        type=bool_type,
-        help="under development",
-    )
-    parser.add_argument(
-        "--n-features-deform",
-        default=8,
-        type=int,
-        help="under development",
-    )
     # loss function
     parser = _parser.add_argument_group("loss function")
     parser.add_argument(
@@ -149,12 +137,6 @@ def build_parser_training() -> argparse.ArgumentParser:
         default=1.0 * 2,
         type=float,
         help="Weight of image regularization.",
-    )
-    parser.add_argument(
-        "--weight-deform",
-        default=0.0,
-        type=float,
-        help="under development",
     )
     parser.add_argument(
         "--delta",
@@ -307,9 +289,7 @@ def build_parser_outputs(
             required=output_model == "required",
             help="Path to save the output model (.pt)",
         )
-    parser.add_argument(
-        "--mask-threshold", type=float, default=1.0, help="under development"
-    )
+    parser.add_argument("--mask-threshold", type=float, default=1.0)
     update_defaults(_parser, **kwargs)
     return _parser
 

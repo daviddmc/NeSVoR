@@ -2,13 +2,11 @@ checkpoints/
 .vscode/
 .mypy_cache
 tests/
-out.pt
-out.nii.gz
-test_logging.log
-test_script.py
+*.pt
+*.log
+test_*.py
 output_slices/
 simulated_slices/
-test_bch_all.py
 *.nii
 *.nii.gz
 

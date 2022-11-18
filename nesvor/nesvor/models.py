@@ -17,7 +17,6 @@ DS_LOSS = "MSE+logVar"
 B_REG = "biasReg"
 T_REG = "transReg"
 I_REG = "imageReg"
-D_REG = "deformReg"
 
 
 class INR(nn.Module):
@@ -143,8 +142,7 @@ class NeSVoR(nn.Module):
         self.trans_first = True
         self.transformation = transformation
         self.psf_sigma = resolution2sigma(resolution, isotropic=False)
-        self.delta = args.delta * v_mean  # 0.2 * v_mean  # 0.05*v_mean
-        # self.psf_mean = 2.0/3.0
+        self.delta = args.delta * v_mean
         if self.args.image_regularization == "TV":
             self.image_regularization = tv_reg
         elif self.args.image_regularization == "edge":
@@ -228,16 +226,6 @@ class NeSVoR(nn.Module):
         xyz_psf = torch.randn(
             batch_size, n_samples, 3, dtype=xyz.dtype, device=xyz.device
         )
-        """ Sinc PSF
-            r2 = (
-                xyz_psf[..., 0] * xyz_psf[..., 0] + xyz_psf[..., 1] * xyz_psf[..., 1]
-            )  # x^2+y^2
-            psf = torch.sinc(torch.sqrt(r2) * (1.2068 / 2.3548)) ** 2 / torch.exp(
-                -0.5 * r2
-            )  # * 1.5 #* 0.4
-            self.psf_mean = self.psf_mean * 0.95 + psf.mean().detach() * 0.05
-            psf = torch.clamp(psf / self.psf_mean, 0.0, 5.0 / self.psf_mean * 2)
-        """
         psf = 1
         psf_sigma = self.psf_sigma[slice_idx][:, None]
         # transform points
@@ -276,8 +264,6 @@ class NeSVoR(nn.Module):
         v_out = (bias * density).mean(-1)
         v_out = c * v_out
         if self.args.pixel_variance:
-            # var = (bias_detach ** 2) * var
-            # var = (c.detach() ** 2  / n_samples) * var.mean(-1)
             var = (bias_detach * psf * var).mean(-1)
             var = c.detach() * var
             var = var**2

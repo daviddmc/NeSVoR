@@ -107,7 +107,7 @@ class Dataset(object):
                 gaussian_blur(mask, (resolution_max / resolution_min).item(), 3)
                 > mask_threshold
             )[0, 0]
-            print(mask.shape)
+            # print(mask.shape)
 
             xyz_c = xyz_min + (shape_xyz - 1) / 2 * resolution_min
             return Volume(
@@ -160,8 +160,8 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
     # setup grad scalar for mixed precision training
     fp16 = True
     scaler = torch.cuda.amp.GradScaler(
-        init_scale=128.0, enabled=fp16, growth_factor=1.0001, backoff_factor=0.9999
-    )  # old init factor = 1.0
+        init_scale=1.0, enabled=fp16, growth_factor=2.0, backoff_factor=0.5
+    )
     # training
     model.train()
     loss_weights = {
@@ -219,20 +219,6 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
             if i < args.n_iter:
                 decay_milestones.pop(0)
                 scheduler.step()
-        """
-        if train_time > tmp_counter:
-            from .sample import sample_volume
-
-            model.eval()
-            # dataset.transformation = model.transformation
-            vv = sample_volume(model.inr, dataset.mask, args)
-            vv.save(
-                "/home/junshen/SVoRT/github/NeSVoR/output_slices/%d.nii.gz"
-                % tmp_counter
-            )
-            model.train()
-            tmp_counter += 1
-        """
 
     # outputs
     transformation = model.transformation

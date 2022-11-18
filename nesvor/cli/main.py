@@ -64,7 +64,7 @@ def build_parser_training() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--n-levels-bias",
-        default=1 * 1,
+        default=0,
         type=int,
         help="Number of levels used for bias field estimation.",
     )

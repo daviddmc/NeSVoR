@@ -237,23 +237,6 @@ class VVR(Registration):
 
         return source, target
 
-    """
-    def resample(self, x):
-        grids = []
-        for i in range(3):
-            fac = self.relative_res[i] / (2**self.current_level)
-            size_new = int(x.shape[i + 2] * fac)
-            grid_max = (size_new - 1) / fac / (x.shape[i + 2] - 1)
-            grids.append(
-                torch.linspace(
-                    -grid_max, grid_max, size_new, dtype=x.dtype, device=x.device
-                )
-            )
-        grid = torch.stack(torch.meshgrid(*grids, indexing="ij")[::-1], -1)
-        y = F.grid_sample(x, grid[None], align_corners=True)
-        return y
-    """
-
     def warp(self, theta, source, target):
         transforms = (
             RigidTransform(self.degree2rad(theta), trans_first=self.trans_first)

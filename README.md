@@ -96,9 +96,6 @@ pip install .
 
 ### Docker Image
 
-Coming soon!
-
-<!--
 #### Install Docker and NVIDIA Container Toolkit
 
 You may follow this [guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) to install Docker and NVIDIA Container Toolkit
@@ -106,11 +103,10 @@ You may follow this [guide](https://docs.nvidia.com/datacenter/cloud-native/cont
 #### Download and Run NeSVoR Image
 
 ```
-docker pull junshenxu/nesvor:latest
-docker run  --gpus '"device=0"' -it junshenxu/nesvor:latest
+docker pull junshenxu/nesvor:v0.1.0
+docker run  --gpus '"device=0"' -it junshenxu/nesvor:v0.1.0
 ```
 Note: our image was built with CUDA 11.6.
--->
 
 ## Usage
 

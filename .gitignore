@@ -1,10 +1,9 @@
 checkpoints/
 .vscode/
 .mypy_cache
-tests/
 *.pt
 *.log
-test_*.py
+/test_*.py
 output_slices/
 simulated_slices/
 *.nii

@@ -217,7 +217,7 @@ def euler2mat(p: torch.Tensor) -> torch.Tensor:
     mat[:, 2, 3] = tz
     mat[:, 3, 3] = 1.0
 
-    return mat
+    return mat[:, :3, :]
 
 
 def point2mat(p: torch.Tensor) -> torch.Tensor:

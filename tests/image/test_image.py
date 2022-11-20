@@ -1,35 +1,22 @@
-import unittest
+from tests import TestCaseNeSVoR
 from nesvor.image import load_slices, save_slices, Slice
 from nesvor.transform import RigidTransform
 import torch
-import numpy as np
 import os
 import shutil
 
 
-class TestImage(unittest.TestCase):
+class TestImage(TestCaseNeSVoR):
 
     tmp_folder = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), "tmp_save_load_slices"
     )
 
-    def get_test_data(self):
-        ax = [
-            [0, 0, 0, 0, 0, 0],
-            [np.pi / 2, 0, 0, 1, 2, 3],
-            [0, np.pi - 0.01, 0, -1.1, -10, 100.5],
-            [0.1, 0.1, 0.1, 0.1, 0.1, 0.1],
-            [-0.1, 0, -0.4, 0.1, 0.5, 0.1],
-            [-0.2, 0.2, -0.1, -100, 200, -159],
-            [-0.12, -0.01, 0.1, -100, 200, -159],
-            [np.pi / 4, np.pi / 4, np.pi / 4, 0.1, 0.1, 0.1],
-            [np.pi / 3, -np.pi / 4, np.pi / 5, 100, 200, -300],
-        ]
+    @staticmethod
+    def get_image_test_data():
         data = []
-        for i, dat in enumerate(ax):
-            transformation = RigidTransform(
-                torch.tensor([dat], dtype=torch.float32).cuda()
-            )
+        for i, (ax, _) in enumerate(TestCaseNeSVoR.get_transform_test_data()):
+            transformation = RigidTransform(ax, trans_first=i % 2 == 1)
             image = torch.full((1, 128 + i, 256 + i), i, dtype=torch.float32).cuda()
             resolution_x, resolution_y, resolution_z = (
                 0.5 + 0.1 * i,
@@ -52,7 +39,7 @@ class TestImage(unittest.TestCase):
         return data
 
     def test_save_load_slices(self):
-        data = self.get_test_data()
+        data = self.get_image_test_data()
         if os.path.exists(self.tmp_folder):
             shutil.rmtree(self.tmp_folder)
         os.makedirs(self.tmp_folder)
@@ -76,7 +63,3 @@ class TestImage(unittest.TestCase):
 
             self.assert_tensor_close(dat["image"], s.image)
         shutil.rmtree(self.tmp_folder)
-
-    @staticmethod
-    def assert_tensor_close(*args, **kwargs):
-        torch.testing.assert_close(*args, **kwargs)

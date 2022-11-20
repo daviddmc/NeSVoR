@@ -1,4 +1,5 @@
 import os
+from .version import *
 
 __base_dir = os.path.dirname(__file__)
 __checkpoint_dir = os.path.join(__base_dir, "checkpoints")

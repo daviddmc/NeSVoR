@@ -7,6 +7,11 @@ import glob
 root_path = os.path.dirname(__file__)
 
 
+version: dict = dict()
+with open("./nesvor/version.py") as fp:
+    exec(fp.read(), version)
+
+
 def get_long_description():
     with open("README.md", "r") as fh:
         long_description = fh.read()
@@ -60,7 +65,7 @@ def get_entry_points():
 setup(
     name="nesvor",
     packages=find_packages(exclude=("tests",)),
-    version="0.1.0",
+    version=version["__version__"],
     description="NeSVoR: toolkit for neural slice-to-volume reconstruction",
     long_description=get_long_description(),
     long_description_content_type="text/markdown",

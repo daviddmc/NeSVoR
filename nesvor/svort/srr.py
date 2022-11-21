@@ -28,7 +28,6 @@ def CG(A, b, x0, n_iter, tol=0.0):
             return x
         r = r - alpha * Ap
         dot_r_r_new = dot(r, r)
-        print(dot_r_r_new)
         if dot_r_r_new <= tol:
             return x
         p = r + (dot_r_r_new / dot_r_r) * p

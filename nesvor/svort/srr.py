@@ -9,7 +9,7 @@ def dot(x, y):
     return torch.dot(x.flatten(), y.flatten())
 
 
-def CG(A, b, x0, n_iter):
+def CG(A, b, x0, n_iter, tol=0.0):
     if x0 is None:
         x = 0
         r = b
@@ -28,6 +28,9 @@ def CG(A, b, x0, n_iter):
             return x
         r = r - alpha * Ap
         dot_r_r_new = dot(r, r)
+        print(dot_r_r_new)
+        if dot_r_r_new <= tol:
+            return x
         p = r + (dot_r_r_new / dot_r_r) * p
         dot_r_r = dot_r_r_new
 
@@ -47,13 +50,16 @@ def PSFreconstruction(transforms, slices, slices_mask, vol_mask, params):
 
 
 class SRR(nn.Module):
-    def __init__(self, n_iter=10, use_CG=False, alpha=0.5, beta=0.02, delta=0.1):
+    def __init__(
+        self, n_iter=10, use_CG=False, alpha=0.5, beta=0.02, delta=0.1, tol=0.0
+    ):
         super().__init__()
         self.n_iter = n_iter
         self.alpha = alpha
         self.beta = beta * delta * delta
         self.delta = delta
         self.use_CG = use_CG
+        self.tol = tol
 
     def forward(
         self,
@@ -83,7 +89,7 @@ class SRR(nn.Module):
             b = At(y * p if p is not None else y)
             if mu and z is not None:
                 b = b + mu * z
-            x = CG(AtA, b, volume, self.n_iter)
+            x = CG(AtA, b, volume, self.n_iter, self.tol)
         else:
             for _ in range(self.n_iter):
                 err = A(x) - y

@@ -75,8 +75,7 @@ class TestSliceAcq(TestCaseNeSVoR):
 
     def test_cg_recon(self):
         slices, transforms, volume, params = self.get_cg_recon_test_data()
-        # print(volume.max(), volume[volume > 0].min())
-        srr = SRR(20, True)
+        srr = SRR(n_iter=20, use_CG=True, tol=1e-8)
         theta = mat_update_resolution(transforms.matrix(), 1, params["res_r"])
         volume_ = srr(theta, slices, volume, params)
-        self.assert_tensor_close(volume_, volume, atol=1e-3, rtol=1e-3)
+        self.assert_tensor_close(volume_, volume, atol=2e-5, rtol=1e-5)

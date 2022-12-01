@@ -356,3 +356,38 @@ def load_stack(
         thickness=resolutions[2],
         gap=resolutions[2],
     )
+
+
+def load_volume(
+    path_vol: str, path_mask: Optional[str] = None, device=torch.device("cpu")
+) -> Volume:
+    vol, resolutions, affine = load_nii_volume(path_vol)
+    if path_mask is None:
+        mask = vol > 0
+    else:
+        mask, resolutions_m, affine_m = load_nii_volume(path_mask)
+        mask = mask > 0
+        if not compare_resolution_affine(
+            resolutions, affine, resolutions_m, affine_m, vol.shape, mask.shape
+        ):
+            raise Exception(
+                "Error: the sizes/resolutions/affine transformations of the input stack and stack mask do not match!"
+            )
+
+    vol_tensor = torch.tensor(vol, device=device)
+    mask_tensor = torch.tensor(mask, device=device)
+
+    vol_tensor, mask_tensor, transformation = affine2transformation(
+        vol_tensor, mask_tensor, resolutions, affine
+    )
+
+    transformation = RigidTransform(transformation.axisangle().mean(0, keepdim=True))
+
+    return Volume(
+        image=vol_tensor,
+        mask=mask_tensor,
+        transformation=transformation,
+        resolution_x=resolutions[0],
+        resolution_y=resolutions[1],
+        resolution_z=resolutions[2],
+    )

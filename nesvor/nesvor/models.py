@@ -166,7 +166,7 @@ class NeSVoR(nn.Module):
         if TYPE_CHECKING:
             self.axisangle_init: torch.Tensor
         self.register_buffer("axisangle_init", axisangle.detach().clone())
-        if self.args.transformation_optimization:
+        if not self.args.no_transformation_optimization:
             self.axisangle = nn.Parameter(axisangle.detach().clone())
         else:
             self.register_buffer("axisangle", axisangle.detach().clone())
@@ -176,18 +176,18 @@ class NeSVoR(nn.Module):
             self.slice_embedding = nn.Embedding(
                 self.n_slices, self.args.n_features_slice
             )
-        if self.args.slice_scale:
+        if not self.args.no_slice_scale:
             self.logit_coef = nn.Parameter(
                 torch.zeros(self.n_slices, dtype=torch.float32)
             )
-        if self.args.slice_variance:
+        if not self.args.no_slice_variance:
             self.log_var_slice = nn.Parameter(
                 torch.zeros(self.n_slices, dtype=torch.float32)
             )
         # INR
         self.inr = INR(bounding_box, self.args)
         # sigma net
-        if self.args.pixel_variance:
+        if not self.args.no_pixel_variance:
             self.sigma_net = tcnn.Network(
                 n_input_dims=self.args.n_features_slice + self.args.n_features_z,
                 n_output_dims=1,
@@ -257,24 +257,24 @@ class NeSVoR(nn.Module):
             log_var = 0
             var = 1
         # imaging
-        if self.args.slice_scale:
+        if not self.args.no_slice_scale:
             c: Any = F.softmax(self.logit_coef, 0)[slice_idx] * self.n_slices
         else:
             c = 1
         v_out = (bias * density).mean(-1)
         v_out = c * v_out
-        if self.args.pixel_variance:
+        if not self.args.no_pixel_variance:
             var = (bias_detach * psf * var).mean(-1)
             var = c.detach() * var
             var = var**2
-        if self.args.slice_variance:
+        if not self.args.no_slice_variance:
             var = var + self.log_var_slice.exp()[slice_idx]
         # losses
         losses = {D_LOSS: ((v_out - v) ** 2 / (2 * var)).mean()}
-        if self.args.pixel_variance or self.args.slice_variance:
+        if not (self.args.no_pixel_variance and self.args.no_slice_variance):
             losses[S_LOSS] = 0.5 * var.log().mean()
             losses[DS_LOSS] = losses[D_LOSS] + losses[S_LOSS]
-        if self.args.transformation_optimization:
+        if not self.args.no_transformation_optimization:
             losses[T_REG] = self.trans_loss(trans_first=self.trans_first)
         if self.args.n_levels_bias:
             losses[B_REG] = log_bias.mean() ** 2
@@ -305,7 +305,7 @@ class NeSVoR(nn.Module):
                 prefix_shape
             )
 
-        if self.args.pixel_variance:
+        if not self.args.no_pixel_variance:
             zs.append(z[..., 1:])
             results["log_var"] = self.sigma_net(torch.cat(zs, -1)).view(prefix_shape)
 

@@ -24,10 +24,6 @@ def update_defaults(parser, **kwargs):
     parser.set_defaults(**kwargs)
 
 
-def bool_type(s):
-    return s.upper() not in ["F", "FALSE", "0"]
-
-
 def build_parser_training() -> argparse.ArgumentParser:
     _parser = argparse.ArgumentParser(add_help=False)
     parser = _parser.add_argument_group("model architecture")
@@ -88,28 +84,24 @@ def build_parser_training() -> argparse.ArgumentParser:
         help="Length of the slice embedding vector e.",
     )
     parser.add_argument(
-        "--transformation-optimization",
-        default=True,
-        type=bool_type,
-        help="Use transfromation optimization.",
+        "--no-transformation-optimization",
+        action="store_true",
+        help="Disable optimization for rigid slice transfromation, i.e., the slice transformations are fixed",
     )
     parser.add_argument(
-        "--slice-scale",
-        default=True,
-        type=bool_type,
-        help="Use adaptive scaling for slices.",
+        "--no-slice-scale",
+        action="store_true",
+        help="Disable adaptive scaling for slices.",
     )
     parser.add_argument(
-        "--pixel-variance",
-        default=True,
-        type=bool_type,
-        help="Use pixel-level variance.",
+        "--no-pixel-variance",
+        action="store_true",
+        help="Disable pixel-level variance.",
     )
     parser.add_argument(
-        "--slice-variance",
-        default=True,
-        type=bool_type,
-        help="Use slice-level variance.",
+        "--no-slice-variance",
+        action="store_true",
+        help="Disable slice-level variance.",
     )
     # loss function
     parser = _parser.add_argument_group("loss function")
@@ -260,10 +252,9 @@ def build_parser_outputs(
             help="number of sample for PSF during inference",
         )
         parser.add_argument(
-            "--output-psf",
-            default=True,
-            type=bool_type,
-            help="use psf for generating output volume",
+            "--no-output-psf",
+            action="store_true",
+            help="Disable psf for generating output volume",
         )
     # output slices
     if output_slices:

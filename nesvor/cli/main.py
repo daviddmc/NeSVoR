@@ -288,13 +288,19 @@ def build_parser_outputs(
 def build_parser_svort() -> argparse.ArgumentParser:
     _parser = argparse.ArgumentParser(add_help=False)
     parser = _parser.add_argument_group("registration")
-    # preprocesssing
     parser.add_argument(
         "--registration",
         default="svort",
         type=str,
         choices=["svort", "svort-stack", "stack", "none"],
         help="The type of registration method applied before reconstruction. svort: the full SVoRT model, svort-stack: only apply stack transformations of SVoRT, stack: stack-to-stack rigid registration, none: no registration.",
+    )
+    parser.add_argument(
+        "--svort-version",
+        default="v1",
+        type=str,
+        choices=["v1", "v2"],
+        help="version of SVoRT",
     )
     return _parser
 

@@ -1,17 +1,17 @@
 import logging
-from typing import List, Tuple
+import time
+from typing import List, Tuple, Optional
 import numpy as np
 import torch
 import torch.nn.functional as F
 from .registration import VVR, resample
 from .srr import PSFreconstruction, SRR
-from . import SVoRT
+from . import SVoRT, SVoRTv2
 from ..transform import RigidTransform, mat_update_resolution
 from ..utils import get_PSF, ncc_loss
 from ..slice_acquisition import slice_acquisition
 from ..image import Stack, Slice
-from .. import __checkpoint_dir, __svort_url, __svort_checkpoint_name
-import logging
+from .. import __checkpoint_dir, __pretrained_svort
 
 
 def compute_score(ncc, ncc_weight):
@@ -129,6 +129,48 @@ def run_model(transforms, stacks, model, res_s, s_thick, res_r):
                         transforms_out[-1]
                     )
     return transforms_out, volume
+
+
+def run_model_all_stack(transforms, stacks, model, res_s, s_thick, res_r):
+    # run models
+    device = stacks[0].device
+    dtype = stacks[0].dtype
+    slice_shape = stacks[0].shape[-2:]
+
+    positions = torch.cat(
+        [
+            torch.stack(
+                (
+                    torch.arange(slices.shape[0], dtype=dtype, device=device)
+                    - slices.shape[0] // 2,
+                    torch.full((slices.shape[0],), i, dtype=dtype, device=device),
+                ),
+                dim=-1,
+            )
+            for i, slices in enumerate(stacks)
+        ],
+        dim=0,
+    )
+
+    with torch.no_grad():
+        volume_shape = (256, 256, 256)
+        data = {
+            "psf_rec": get_PSF(
+                res_ratio=(res_s / res_r, res_s / res_r, s_thick / res_r),
+                device=device,
+            ),
+            "slice_shape": slice_shape,  # (128, 128)
+            "resolution_slice": res_s,
+            "resolution_recon": res_r,
+            "slice_thickness": s_thick,
+            "volume_shape": volume_shape,  # (125, 169, 145),
+            "transforms": RigidTransform.cat(transforms).matrix(),
+            "stacks": torch.cat(stacks, dim=0),
+            "positions": positions,
+        }
+        t_out, v_out, _ = model(data)
+        transforms_out = [t_out[-1][positions[:, -1] == i] for i in range(len(stacks))]
+    return transforms_out, v_out[-1]
 
 
 def parse_data(dataset, res_s):
@@ -325,7 +367,7 @@ def stack_registration(transforms_list, transform_target, stacks, res_s, s_thick
     return transforms_out
 
 
-def reconstruct_from_stacks(transforms, stacks, res_s, s_thick, res_r):
+def reconstruct_from_stacks(transforms, stacks, res_s, s_thick, res_r, n_stack_recon):
     device = stacks[0].device
     size_max = max([max(stacks[j].shape[-2:]) for j in range(len(stacks))])
     stacks_pad = [stack for stack in stacks]
@@ -349,7 +391,8 @@ def reconstruct_from_stacks(transforms, stacks, res_s, s_thick, res_r):
         "s_thick": s_thick,
         "volume_shape": (256, 256, 256),
     }
-    n_stack_recon = min(3, len(stacks_pad))
+    if n_stack_recon is None:
+        n_stack_recon = len(stacks_pad)
     mat = mat_update_resolution(
         RigidTransform.cat([transforms[j] for j in range(n_stack_recon)]).matrix(),
         1,
@@ -418,10 +461,18 @@ def run_svort(dataset, model, svort, vvr, force_vvr):
         ) = parse_data(dataset, res_s)
 
     if svort:
-        transforms_svort, volume_svort = run_model(
-            transforms_cropped_reset, stacks_cropped, model, res_s, s_thick, res_r
-        )
+        time_start = time.time()
+        if isinstance(model, SVoRT):
+            transforms_svort, volume_svort = run_model(
+                transforms_cropped_reset, stacks_cropped, model, res_s, s_thick, res_r
+            )
+        else:
+            transforms_svort, volume_svort = run_model_all_stack(
+                transforms_cropped_reset, stacks_cropped, model, res_s, s_thick, res_r
+            )
+        logging.debug("time for running SVoRT: %f s" % (time.time() - time_start))
 
+        time_start = time.time()
         transforms_corrected, score_svort = correct_svort(
             transforms_svort,
             transforms_cropped_reset,
@@ -430,6 +481,10 @@ def run_svort(dataset, model, svort, vvr, force_vvr):
             res_s,
             s_thick,
             res_r,
+        )
+        logging.debug(
+            "time for stack transformation correction: %f s"
+            % (time.time() - time_start)
         )
 
         transforms_svort_full, transforms_stack_full = get_transforms_full(
@@ -442,6 +497,7 @@ def run_svort(dataset, model, svort, vvr, force_vvr):
         score_svort = float("-inf")
 
     if vvr:
+        time_start = time.time()
         transforms_vvr = stack_registration(
             [transforms_ori, transforms_stack_full] if svort else [transforms_ori],
             transforms_stack_full[0] if svort else transforms_ori[0],
@@ -449,9 +505,17 @@ def run_svort(dataset, model, svort, vvr, force_vvr):
             res_s,
             s_thick,
         )
+        logging.debug("time for stack registration: %f s" % (time.time() - time_start))
+
         if svort:
+            time_start = time.time()
             volume_vvr = reconstruct_from_stacks(
-                transforms_vvr, stacks_ori, res_s, s_thick, res_r
+                transforms_vvr,
+                stacks_ori,
+                res_s,
+                s_thick,
+                res_r,
+                3 if isinstance(model, SVoRT) else None,
             )
 
             score_vvr = compute_score(
@@ -463,6 +527,10 @@ def run_svort(dataset, model, svort, vvr, force_vvr):
                     s_thick,
                     res_r,
                 )
+            )
+            logging.debug(
+                "time for evaluating stack registration %f s"
+                % (time.time() - time_start)
             )
         else:
             score_vvr = float("inf")
@@ -495,17 +563,30 @@ def run_svort(dataset, model, svort, vvr, force_vvr):
 
 
 def svort_predict(
-    dataset: List[Stack], device, svort: bool, vvr: bool, force_vvr: bool
+    dataset: List[Stack],
+    device,
+    svort_version: str,
+    svort: bool,
+    vvr: bool,
+    force_vvr: bool,
 ) -> List[Slice]:
-    model = None
+    model: Optional[torch.nn.Module] = None
     if svort:
-        model = SVoRT(n_iter=3)
+        if svort_version not in __pretrained_svort:
+            raise ValueError("unknown SVoRT version!")
+        svort_url = __pretrained_svort[svort_version]
         cp = torch.hub.load_state_dict_from_url(
-            url=__svort_url,
+            url=svort_url,
             model_dir=__checkpoint_dir,
             map_location=device,
-            file_name=__svort_checkpoint_name,
+            file_name="SVoRT_%s.pt" % svort_version,
         )
+        if svort_version == "v1" or "v1." in svort_version:
+            model = SVoRT(n_iter=3)
+        elif svort_version == "v2" or "v2." in svort_version:
+            model = SVoRTv2(n_iter=4)
+        else:
+            raise ValueError("unknown SVoRT version!")
         model.to(device)
         model.load_state_dict(cp["model"])
         model.eval()

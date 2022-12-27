@@ -170,5 +170,5 @@ def register(args: argparse.Namespace, data: List[Stack]) -> List[Slice]:
     svort = args.registration == "svort" or args.registration == "svort-stack"
     vvr = args.registration != "none"
     force_vvr = args.registration == "svort-stack"
-    slices = svort_predict(data, args.device, svort, vvr, force_vvr)
+    slices = svort_predict(data, args.device, args.svort_version, svort, vvr, force_vvr)
     return slices

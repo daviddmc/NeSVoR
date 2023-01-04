@@ -2,6 +2,7 @@ import time
 import argparse
 import logging
 import re
+import torch
 from typing import List, Optional, Tuple
 from ..image import Stack, Slice
 from ..svort.inference import svort_predict
@@ -94,6 +95,7 @@ class Reconstruct(Command):
             self.args.inference_batch_size = 8 * self.args.batch_size
         if not self.args.n_inference_samples:
             self.args.n_inference_samples = 2 * self.args.n_samples
+        self.args.dtype = torch.float32 if self.args.single_precision else torch.float16
 
     def exec(self) -> None:
         self.new_timer("Data loading")

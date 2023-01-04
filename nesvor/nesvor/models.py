@@ -19,6 +19,56 @@ T_REG = "transReg"
 I_REG = "imageReg"
 
 
+def build_encoding(**config):
+    n_input_dims = config.pop("n_input_dims")
+    dtype = config.pop("dtype")
+    return tcnn.Encoding(n_input_dims=n_input_dims, encoding_config=config, dtype=dtype)
+
+
+def build_network(**config):
+    dtype = config.pop("dtype")
+    if dtype == torch.float16:
+        return tcnn.Network(
+            n_input_dims=config["n_input_dims"],
+            n_output_dims=config["n_output_dims"],
+            network_config={
+                "otype": "CutlassMLP",
+                "activation": config["activation"],
+                "output_activation": config["output_activation"],
+                "n_neurons": config["n_neurons"],
+                "n_hidden_layers": config["n_hidden_layers"],
+            },
+        )
+    elif dtype == torch.float32:
+        activation = (
+            None
+            if config["activation"] == "None"
+            else getattr(nn, config["activation"])
+        )
+        output_activation = (
+            None
+            if config["output_activation"] == "None"
+            else getattr(nn, config["output_activation"])
+        )
+        models = []
+        if config["n_hidden_layers"] > 0:
+            models.append(nn.Linear(config["n_input_dims"], config["n_neurons"]))
+            for _ in range(config["n_hidden_layers"] - 1):
+                if activation is not None:
+                    models.append(activation())
+                models.append(nn.Linear(config["n_neurons"], config["n_neurons"]))
+            if activation is not None:
+                models.append(activation())
+            models.append(nn.Linear(config["n_neurons"], config["n_output_dims"]))
+        else:
+            models.append(nn.Linear(config["n_input_dims"], config["n_output_dims"]))
+        if output_activation is not None:
+            models.append(output_activation())
+        return nn.Sequential(*models)
+    else:
+        raise ValueError("unknown dtype")
+
+
 class INR(nn.Module):
     def __init__(self, bounding_box: torch.Tensor, args: Namespace) -> None:
         super().__init__()
@@ -49,28 +99,25 @@ class INR(nn.Module):
             .int()
             .item()
         )
-        self.encoding = tcnn.Encoding(
+        self.encoding = build_encoding(
             n_input_dims=3,
-            encoding_config={
-                "otype": "HashGrid",
-                "n_levels": n_levels,
-                "n_features_per_level": args.n_features_per_level,
-                "log2_hashmap_size": args.log2_hashmap_size,
-                "base_resolution": base_resolution,
-                "per_level_scale": args.level_scale,
-            },
+            otype="HashGrid",
+            n_levels=n_levels,
+            n_features_per_level=args.n_features_per_level,
+            log2_hashmap_size=args.log2_hashmap_size,
+            base_resolution=base_resolution,
+            per_level_scale=args.level_scale,
+            dtype=args.dtype,
         )
         # density net
-        self.density_net = tcnn.Network(
+        self.density_net = build_network(
             n_input_dims=n_levels * args.n_features_per_level,
             n_output_dims=1 + args.n_features_z,
-            network_config={
-                "otype": "CutlassMLP",
-                "activation": "ReLU",
-                "output_activation": "None",
-                "n_neurons": args.width,
-                "n_hidden_layers": args.depth,
-            },
+            activation="ReLU",
+            output_activation="None",
+            n_neurons=args.width,
+            n_hidden_layers=args.depth,
+            dtype=args.dtype,
         )
         # logging
         logging.debug(
@@ -188,30 +235,26 @@ class NeSVoR(nn.Module):
         self.inr = INR(bounding_box, self.args)
         # sigma net
         if not self.args.no_pixel_variance:
-            self.sigma_net = tcnn.Network(
+            self.sigma_net = build_network(
                 n_input_dims=self.args.n_features_slice + self.args.n_features_z,
                 n_output_dims=1,
-                network_config={
-                    "otype": "CutlassMLP",
-                    "activation": "ReLU",
-                    "output_activation": "None",
-                    "n_neurons": self.args.width,
-                    "n_hidden_layers": self.args.depth,
-                },
+                activation="ReLU",
+                output_activation="None",
+                n_neurons=self.args.width,
+                n_hidden_layers=self.args.depth,
+                dtype=self.args.dtype,
             )
         # bias net
         if self.args.n_levels_bias:
-            self.b_net = tcnn.Network(
+            self.b_net = build_network(
                 n_input_dims=self.args.n_levels_bias * self.args.n_features_per_level
                 + self.args.n_features_slice,
                 n_output_dims=1,
-                network_config={
-                    "otype": "CutlassMLP",
-                    "activation": "ReLU",
-                    "output_activation": "None",
-                    "n_neurons": self.args.width,
-                    "n_hidden_layers": self.args.depth,
-                },
+                activation="ReLU",
+                output_activation="None",
+                n_neurons=self.args.width,
+                n_hidden_layers=self.args.depth,
+                dtype=self.args.dtype,
             )
 
     def forward(

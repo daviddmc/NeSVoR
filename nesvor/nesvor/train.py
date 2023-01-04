@@ -158,7 +158,7 @@ def train(slices: List[Slice], args: Namespace) -> Tuple[INR, List[Slice], Volum
     )
     decay_milestones = [int(m * args.n_iter) for m in args.milestones]
     # setup grad scalar for mixed precision training
-    fp16 = True
+    fp16 = not args.single_precision
     scaler = torch.cuda.amp.GradScaler(
         init_scale=1.0, enabled=fp16, growth_factor=2.0, backoff_factor=0.5
     )

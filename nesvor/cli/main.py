@@ -103,6 +103,11 @@ def build_parser_training() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable slice-level variance.",
     )
+    parser.add_argument(
+        "--single-precision",
+        action="store_true",
+        help="use float32 (default: float16)",
+    )
     # loss function
     parser = _parser.add_argument_group("loss function")
     parser.add_argument(
